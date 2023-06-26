@@ -1,8 +1,8 @@
 class UserController < ApplicationController
   before_action :authenticate_user, except: [:create, :birthday_details ,:index, :gen_pdf, :forget_password]
   before_action :find_user, only: [:follow, :unfollow, :block_follow_user, :blocked_followers_list]
+  before_action :follower_and_following, only: [:list_followers_and_followings, :search_follower, :search_following]
   include JwtToken
-  # require 'twilio.rb'
   def index
     @users = User.all
     render json: UserSerializer.new(@users), status: :ok
@@ -21,15 +21,11 @@ class UserController < ApplicationController
     end
   end
 
-  def show_followers
-    follower = @current_user&.followed_users&.where(is_blocked: false)
-    following = @current_user&.following_users&.where(is_blocked: false)
-    render json: {followers: UserSerializer.new(follower&.map{|x| x&.followee}), followings: UserSerializer.new(following&.map{|x| x&.follower})}   
+  def list_followers_and_followings
+    render json: {followers: UserSerializer.new(@account), followings: UserSerializer.new(@account1)}   
   end
 
-
   def update
-      byebug
     if @current_user.present?
       @current_user.update(user_params)
       render json: UserSerializer.new(@current_user), status: :ok
@@ -72,6 +68,42 @@ class UserController < ApplicationController
   end
 
 
+  def search_follower
+    follower = @account.where('name ILIKE ?', "%#{params[:follower]}%")
+    if follower.present?
+      render json: UserSerializer.new(follower)
+    else
+      render json: UserSerializer.new(@account1)
+    end
+  end
+
+  def search_following
+    following = @account1.where('name ILIKE ?', "%#{params[:following]}%")
+    if following.present? 
+      render json: UserSerializer.new(following)
+    else
+      render json: UserSerializer(@account1)
+    end
+  end
+
+  def follower_and_following
+    @results = @current_user.followed_users.where(is_blocked: false).pluck(:followee_id).uniq
+    @account = User.where(id: @results)
+    @results1 = @current_user.following_users.where(is_blocked: false).pluck(:follower_id).uniq
+    @account1 = User.where(id: @results1)
+  end
+
+  private
+  def find_user
+    @user = User.find(params[:id])
+  end
+
+  def user_params
+    params.permit(:name, :username, :email, :password, :password_confirmation, :password_digest, :phone_number, :activated)
+  end
+end
+ 
+
   # def verify_otp
   #   if @current_user.present? && @current_user&.sms_otp&.sms_otp == params[:sms_otp]
   #     byebug
@@ -113,6 +145,7 @@ class UserController < ApplicationController
   #                        }
   # end
 
+
   # def birthday_details
   #   @user = User.where(dob: Date.today.to_s)
   #   if @user.present?
@@ -121,14 +154,3 @@ class UserController < ApplicationController
   #     render json: {message: "No one's birthady today"}
   #   end
   # end
-
-
-  private
-  def find_user
-    @user = User.find(params[:id])
-  end
-
-  def user_params
-    params.permit(:name, :username, :email, :password, :password_confirmation, :password_digest, :phone_number, :activated)
-  end
-end

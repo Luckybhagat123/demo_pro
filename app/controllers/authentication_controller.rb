@@ -1,5 +1,5 @@
 class AuthenticationController < ApplicationController
-  skip_before_action :authenticate_user
+  before_action :authenticate_user, except: [:login]
   include JwtToken
 
   def login

@@ -9,7 +9,6 @@ class ApplicationController < ActionController::Base
   private
 
   def authenticate_user
-    byebug
     header = request.headers['token']
     header = header.split(' ').last if header
     begin

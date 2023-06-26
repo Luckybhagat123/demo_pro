@@ -1,4 +1,4 @@
 class HotelSerializer
   include JSONAPI::Serializer
-  attributes :id, :name, :address, :desciption, :explore_location_id
+  attributes :id, :name, :address, :description, :explore_location, :average_rating
 end
